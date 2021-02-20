@@ -16,6 +16,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::convert::TryFrom;
 use std::fs;
+use std::os::raw::c_char;
 use std::time::{Duration, SystemTime};
 use strum_macros::Display;
 
@@ -404,10 +405,10 @@ pub fn safely_wrapped_klogctl(klogtype: KLogType, buf_u8: &mut [u8]) -> Result<u
     let klt = klogtype.clone() as libc::c_int;
 
     // extract mutable u8 raw pointer from buf
-    // and typecast it (very dangerously) to i8
+    // and typecast it (very dangerously) to c_char
     // fortunately it's all one-byte long so
     // should be reasonably okay.
-    let buf_i8 = buf_u8.as_mut_ptr() as *mut i8;
+    let buf_c_char = buf_u8.as_mut_ptr() as *mut c_char;
 
     let buflen = match libc::c_int::try_from(buf_u8.len()) {
         Ok(i) => i,
@@ -420,7 +421,7 @@ pub fn safely_wrapped_klogctl(klogtype: KLogType, buf_u8: &mut [u8]) -> Result<u
         }
     };
 
-    let response_cint: libc::c_int = unsafe { klogctl(klt, buf_i8, buflen) };
+    let response_cint: libc::c_int = unsafe { klogctl(klt, buf_c_char, buflen) };
 
     if response_cint < 0 {
         let err = errno();
